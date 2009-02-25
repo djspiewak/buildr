@@ -18,16 +18,16 @@ class Object
   def method_missing(sym, *args)
     cmd = sym.to_s
     if cmd.downcase != 'cd' and command_available? cmd
-	  sys_args = if args.size > 0 then "'" + args.join("' '") + "'" else '' end
+      sys_args = if args.size > 0 then "'" + args.join("' '") + "'" else '' end
 
       system "#{cmd} #{sys_args}"
-	else
+    else
       super
-	end
+    end
   end
 end
 
-# TODO	make work on Windows
+# TODO    make work on Windows
 def command_available?(cmd)
   system "which #{cmd} &> /dev/null"
 end
