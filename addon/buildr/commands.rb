@@ -17,7 +17,7 @@
 class Object
   def method_missing(sym, *args)
     cmd = sym.to_s
-    if cmd.downcase != 'cd' and command_available? cmd
+    if cmd.downcase != 'cd' and __command_available? cmd
       sys_args = if args.size > 0 then "'" + args.join("' '") + "'" else '' end
 
       system "#{cmd} #{sys_args}"
@@ -27,7 +27,13 @@ class Object
   end
 end
 
-# TODO    make work on Windows
-def command_available?(cmd)
-  system "which #{cmd} &> /dev/null"
+def __command_available?(cmd)
+  processor, platform, *rest = RUBY_PLATFORM.split("-")
+  
+  if platform == 'mswin32'
+    res = `#{File.dirname(__FILE__)}/which.bat #{cmd}`
+    res =~ /Found in PATH/
+  else
+    system "which #{cmd} &> /dev/null"
+  end
 end
