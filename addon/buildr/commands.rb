@@ -28,12 +28,8 @@ class Object
 end
 
 def __command_available?(cmd)
-  processor, platform, *rest = RUBY_PLATFORM.split("-")
-  
-  if platform == 'mswin32'
-    res = `#{File.dirname(__FILE__)}/which.bat #{cmd}`
-    res =~ /Found in PATH/
-  else
-    system "which #{cmd} &> /dev/null"
+  path = ENV['PATH'].split File::PATH_SEPARATOR
+  path.inject false do |found, prefix|
+    found || File.executable?(File.expand_path(prefix, cmd))
   end
 end
