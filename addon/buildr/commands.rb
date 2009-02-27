@@ -30,6 +30,6 @@ end
 def __command_available?(cmd)
   path = ENV['PATH'].split File::PATH_SEPARATOR
   path.inject false do |found, prefix|
-    found || File.executable?(File.expand_path(prefix, cmd))
+    found || File.executable?(File.expand_path(cmd, prefix))
   end
 end
