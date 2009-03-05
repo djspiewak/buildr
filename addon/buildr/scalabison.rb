@@ -4,7 +4,7 @@ require 'buildr/scala'
 module Buildr
   # Provides ScalaBison compile tasks. Require explicitly using <code>require "buildr/scalabison"</code>.
   module ScalaBison
-    SCALA_BISON = 'edu.uwm.cs:scalabison:jar:0.79'
+    SCALA_BISON = 'edu.uwm.cs:scalabison:jar:0.791'
     
     Java.classpath << Buildr::Scala::Scalac.dependencies
     Java.classpath << SCALA_BISON
