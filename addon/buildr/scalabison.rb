@@ -13,6 +13,19 @@ module Buildr
       target = _(:target, :generated, :scalabison)
       task = file target
       
+      options = if dirs.last === Hash
+        dirs.pop
+      else
+        {}
+      end
+      
+      options.each do |opt, value|
+        if opt == :debug
+        else
+          fail "Unknown option '#{opt}'"
+        end
+      end
+      
       Java.load
       
       dirs.each do |dir|
@@ -46,6 +59,9 @@ module Buildr
             FileUtils.cp fname, dname
             
             args = ['-v', cname + '.y']
+            if options[:debug]
+              args.unshift '-t'
+            end
             
             trace "Running ScalaBison against #{cname + '.y'}"
             Java.edu.uwm.cs.cool.meta.parser.RunGenerator.main(args.to_java(Java.java.lang.String))
