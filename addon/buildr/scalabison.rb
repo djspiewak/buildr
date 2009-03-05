@@ -13,7 +13,7 @@ module Buildr
       target = _(:target, :generated, :scalabison)
       task = file target
       
-      options = if dirs.last === Hash
+      options = if Hash === dirs.last
         dirs.pop
       else
         {}
