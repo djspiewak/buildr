@@ -22,6 +22,10 @@ module Buildr
       Project.local_task :rollback
       Project.local_task :server
     end
+
+	before_define do |project|
+	  project.compile.with APP_ENGINE_USER_LIBS
+	end
     
     after_define do |project|
       def appcfg(action, *args)
@@ -33,8 +37,6 @@ module Buildr
         trace "#{HOME}/bin/dev_appserver.sh " + args.join(' ')
         system "#{HOME}/bin/dev_appserver.sh", *args
       end
-
-	  project.compile.dependencies << APP_ENGINE_USER_LIBS
       
       war = project.package :war
       
