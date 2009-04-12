@@ -6,7 +6,7 @@ module Buildr
     
     HOME = ENV['GAE_HOME'] or fail 'Are we forgetting something? GAE_HOME not set.'
     
-    APP_ENGINE_USER_LIBS = artifacts Dir["#{HOME}/lib/user/**/*.jar"]
+    APP_ENGINE_USER_LIBS = Dir["#{HOME}/lib/user/**/*.jar"]
 
     class GAEConfig
       attr_reader :host, :email
