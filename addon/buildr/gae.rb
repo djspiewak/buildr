@@ -35,7 +35,7 @@ module Buildr
       war = project.package :war
       
       war_dir = file project.path_to(:target, :war) => war do
-        mkdir project.path_to(:target, :war)
+        mkdir project.path_to(:target, :war) unless File.exists? project.path_to(:target, :war)
         
         cwd = Dir.pwd
         Dir.chdir project.path_to(:target, :war)
