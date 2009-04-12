@@ -34,7 +34,7 @@ module Buildr
         system "#{HOME}/bin/dev_appserver.sh", *args
       end
 
-	  project.compile.with APP_ENGINE_USER_LIBS
+	  project.compile.dependencies << APP_ENGINE_USER_LIBS
       
       war = project.package :war
       
