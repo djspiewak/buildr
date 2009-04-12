@@ -5,8 +5,7 @@ module Buildr
     include Extension
     
     HOME = ENV['GAE_HOME'] or fail 'Are we forgetting something? GAE_HOME not set.'
-    
-    APP_ENGINE_USER_LIBS = Dir["#{HOME}/lib/user/**/*.jar"]
+    LIBS = Dir["#{HOME}/lib/user/**/*.jar"]
 
     class GAEConfig
       attr_reader :host, :email
@@ -22,10 +21,6 @@ module Buildr
       Project.local_task :rollback
       Project.local_task :server
     end
-
-	before_define do |project|
-	  project.compile.with APP_ENGINE_USER_LIBS
-	end
     
     after_define do |project|
       def appcfg(action, *args)
