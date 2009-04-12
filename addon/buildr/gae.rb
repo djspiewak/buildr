@@ -22,50 +22,46 @@ module Buildr
     end
     
     after_define do |project|
+      def appcfg(action, *args)
+        trace "#{HOME}/bin/appcfg.sh " + project.gae.options.join(' ') + action.to_s + args.join(' ')
+        system "#{HOME}/bin/appcfg.sh", project.gae.options, action.to_s, *args
+      end
+      
+      def dev_appserver(*args)
+        trace "#{HOME}/bin/dev_appserver.sh " + args.join(' ')
+        system "#{HOME}/bin/dev_appserver.sh", *args
+      end
+      
       war = project.package :war
       
-      file _(:target, :war) => war do
-        mkdir _(:target, :war)
+      war_dir = file project.path_to(:target, :war) => war do
+        mkdir project.path_to(:target, :war)
         
-        in_dir _(:target, :war) do
-          cmd = "jar xf #{war.name} -C war"
-          trace cmd
-          system cmd
-        end
+        cwd = Dir.pwd
+        Dir.chdir project.path_to(:target, :war)
+        
+        cmd = "jar xf '#{war.name}'"
+        trace cmd
+        system cmd
+        
+        Dir.chdir cwd
       end
       
-      task :deploy => _(:target, :war) do
-        appcfg :update, _(:target, :war)
+      task :deploy => war_dir do
+        appcfg :update, war_dir.name
       end
       
-      task :rollback => _(:target, :war) do
-        appcfg :rollback, _(:target, :war)
+      task :rollback => war_dir do
+        appcfg :rollback, war_dir.name
       end
       
-      task :server => _(:target, :war) do
-        dev_appserver _(:target, :war)
+      task :server => war_dir do
+        dev_appserver war_dir.name
       end
     end
     
     def gae
       @gae || GAEConfig.new
-    end
-    
-  private
-    
-    def appcfg(action, *args)
-      system "#{HOME}/appcfg.sh", gae.options, action.to_s, *args
-    end
-    
-    def dev_appserver(*args)
-      system "#{HOME}/dev_appserver.sh", *args
-    end
-    
-    def in_dir(dir)
-      cwd = Dir.pwd
-      Dir.chdir dir
-      yield
-      Dir.chdir cwd
     end
   end
   
