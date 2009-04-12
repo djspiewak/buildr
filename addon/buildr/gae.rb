@@ -4,11 +4,11 @@ module Buildr
   module GAE
     include Extension
     
-    HOME = ENV['GAE_HOME'] || fail 'Are we forgetting something? GAE_HOME not set.'
+    HOME = ENV['GAE_HOME'] or fail 'Are we forgetting something? GAE_HOME not set.'
     
     class GAEConfig
-      attr_accessor :host, :email
-      attr_mutator :host, :email
+      attr_reader :host, :email
+      attr_writer :host, :email
       
       def options
         ['--email', email, '--host', host]
