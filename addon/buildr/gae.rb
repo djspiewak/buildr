@@ -23,12 +23,12 @@ module Buildr
     end
     
     after_define do |project|
-      def appcfg(action, *args)
+      appcfg = lambda do |action, *args|
         trace "#{HOME}/bin/appcfg.sh " + project.gae.options.join(' ') + action.to_s + args.join(' ')
         system "#{HOME}/bin/appcfg.sh", project.gae.options, action.to_s, *args
       end
       
-      def dev_appserver(*args)
+      dev_appserver = lambda do |*args|
         trace "#{HOME}/bin/dev_appserver.sh " + args.join(' ')
         system "#{HOME}/bin/dev_appserver.sh", *args
       end
@@ -49,15 +49,15 @@ module Buildr
       end
       
       task :deploy => war_dir do
-        appcfg :update, war_dir.name
+        appcfg.call :update, war_dir.name
       end
       
       task :rollback => war_dir do
-        appcfg :rollback, war_dir.name
+        appcfg.call :rollback, war_dir.name
       end
       
       task :server => war_dir do
-        dev_appserver war_dir.name
+        dev_appserver.call war_dir.name
       end
     end
     
