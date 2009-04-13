@@ -12,10 +12,14 @@ module Buildr
       attr_writer :host, :email
       
       def options
-	    if email.nil? or host.nil?
-          fail 'Cannot deploy without specifying the `email` and `host` options.'
+	    back = []
+		unless host.nil?
+		  back << ['--host', host]
 		end
-        ['--email', email, '--host', host]
+		unless email.nil?
+		  back << ['--email', email]
+		end
+		back
       end
     end
     
