@@ -32,7 +32,7 @@ module Buildr
     after_define do |project|
       appcfg = lambda do |action, *args|
         trace "#{HOME}/bin/appcfg.sh " + project.gae.options.join(' ') + action.to_s + args.join(' ')
-        system "#{HOME}/bin/appcfg.sh", project.gae.options, action.to_s, *args
+        system "#{HOME}/bin/appcfg.sh", project.gae.options.join(' '), action.to_s, *args
       end
       
       dev_appserver = lambda do |*args|
