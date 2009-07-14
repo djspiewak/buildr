@@ -100,10 +100,10 @@ When you call @repositories.remote@, you get an array of URLs for the various re
 
 {% highlight ruby %}
 repositories.remote.delete 'http://repo1.maven.org/maven2'  # remove the default
-repositories.remote << 'http://www.ibiblio.org/maven2'      # add Ibilio's repo
+repositories.remote << 'http://www.ibiblio.org/maven2'      # add Ibiblio's repo
 {% endhighlight %}
 
-Repositories will be scanned for artifacts in the order in which they appear in this array.  Thus, if you prefer Ibilio's repository, but you still have some artifacts which are only available from Maven.org, you can include both with Ibilio as the "first in line":
+Repositories will be scanned for artifacts in the order in which they appear in this array.  Thus, if you prefer Ibiblio's repository, but you still have some artifacts which are only available from Maven.org, you can include both with Ibiblio as the "first in line":
 
 {% highlight ruby %}
 repositories.remote.unshift 'http://www.ibiblio.org/maven2'
