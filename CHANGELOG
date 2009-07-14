@@ -1,4 +1,5 @@
 1.3.5 (Pending)
+* Added:  Continuous compilation support
 * Added:  Interactive shell (REPL) support
 * Added:  BUILDR-56 Download Scala artifacts if not available locally
 * Added:  Mandriva (urpmi) installation support (with help from Franck Villaume).
