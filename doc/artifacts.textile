@@ -96,10 +96,17 @@ h2(#repositories). Specifying Repositories
 
 Buildr can download artifacts for you, but only if you tell it where to find them.  You need to specify at least one remote repository, from which to download these artifacts.
 
-When you call @repositories.remote@, you get an array of URLs for the various remote repositories.  Initially, it's an empty array, to which you can add new repositories.  For example:
+When you call @repositories.remote@, you get an array of URLs for the various remote repositories.  Initially, it just contains the canonical Maven2 repository at maven.org along with any language-specific repositories required by your project (e.g. Scala projects have the scala-tools.org repository as well).  You can add new repositories and even remove old ones simply by modifying this array:
 
 {% highlight ruby %}
-repositories.remote << 'http://www.ibiblio.org/maven2/'
+repositories.remote.delete 'http://repo1.maven.org/maven2'  # remove the default
+repositories.remote << 'http://www.ibiblio.org/maven2'      # add Ibilio's repo
+{% endhighlight %}
+
+Repositories will be scanned for artifacts in the order in which they appear in this array.  Thus, if you prefer Ibilio's repository, but you still have some artifacts which are only available from Maven.org, you can include both with Ibilio as the "first in line":
+
+{% highlight ruby %}
+repositories.remote.unshift 'http://www.ibiblio.org/maven2'
 {% endhighlight %}
 
 If you need to use a proxy server to access remote repositories, you can set the environment variable @HTTP_PROXY@ to the proxy server URL (use @HTTPS_PROXY@ for proxying HTTPS connections).  You can also work without a proxy for certain hosts by specifying the @NO_PROXY@ environment variable.  For example:
