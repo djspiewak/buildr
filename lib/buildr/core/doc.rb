@@ -4,6 +4,7 @@ module Buildr
     
     class << self
       def select(lang)
+        fail 'Unable to define doc task for nil language' if lang == nil
         engines.detect { |e| e.language.to_sym == lang.to_sym }
       end
       
