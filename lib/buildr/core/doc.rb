@@ -35,6 +35,10 @@ module Buildr
           @language = options[:language]
           @source_ext = options[:source_ext]
         end
+        
+        def to_sym
+          @symbol ||= name.split('::').last.downcase.to_sym
+        end
       end
 
       def initialize(*args) #:nodoc:
@@ -100,6 +104,7 @@ module Buildr
       # For example:
       #   doc.using :windowtitle=>'My application'
       def using(*args)
+        # TODO  need to be able to select different engines (e.g. vscaladoc)
         args.pop.each { |key, value| @options[key.to_sym] = value } if Hash === args.last
         args.each { |key| @options[key.to_sym] = true }
         self
