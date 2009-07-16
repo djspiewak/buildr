@@ -156,7 +156,7 @@ module Buildr
     end
 
     before_define do |project|
-      DocTask = Doc.select project.compile.class.language
+      DocTask = Doc.select project.compile.language
       
       DocTask.define_task('doc').tap do |doc|
         doc.into project.path_to(:target, :doc)
