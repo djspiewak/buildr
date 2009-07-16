@@ -185,6 +185,11 @@ module Buildr
     def doc(*sources, &block)
       task('doc').from(*sources).enhance &block
     end
+    
+    def javadoc(*sources, &block)
+      warn 'The javadoc method is deprecated and will be removed in a future release.'
+      doc(sources, block)
+    end
   end
   
   class Project
