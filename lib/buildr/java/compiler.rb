@@ -131,6 +131,5 @@ end
 
 Buildr::Compiler << Buildr::Compiler::Javac
 class Buildr::Project
-  include Buildr::Javadoc
   include Buildr::Apt
 end
