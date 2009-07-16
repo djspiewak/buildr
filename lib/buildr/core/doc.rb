@@ -2,6 +2,16 @@ module Buildr
   module Doc
     include Extension
     
+    class << self
+      def select(lang)
+        engines.detect { |e| e.lang.to_sym == lang.to_sym }
+      end
+      
+      def engines
+        @engines ||= []
+      end
+    end
+    
     # Base class for any documentation provider.  Defines most
     # common functionality (things like @into@, @from@ and friends).
     class Base < Rake::Task

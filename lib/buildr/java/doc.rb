@@ -1,9 +1,7 @@
 require 'buildr/core/doc'
 
 module Buildr
-  
-  # Methods added to Project for creating JavaDoc documentation.
-  module Javadoc
+  module Doc
 
     # A convenient task for creating Javadocs from the project's compile task. Minimizes all
     # the hard work to calling #from and #using.
@@ -16,7 +14,17 @@ module Buildr
     #     . . .
     #     javadoc projects('myapp:foo', 'myapp:bar')
     #   end
-    class JavadocTask < Buildr::Doc::Base
+    class JavadocEngine < Base
+      
+      class << self
+        def lang
+          :java
+        end
+        
+        def name
+          :javadoc
+        end
+      end
 
       def source_files #:nodoc:
         @source_files ||= @files.map(&:to_s).
@@ -57,3 +65,5 @@ module Buildr
     end
   end
 end
+
+Buildr::Doc.engines << Buildr::Doc::JavadocEngine
