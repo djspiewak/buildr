@@ -4,7 +4,7 @@ module Buildr
     
     class << self
       def select(lang)
-        engines.detect { |e| e.lang.to_sym == lang.to_sym }
+        engines.detect { |e| e.language.to_sym == lang.to_sym }
       end
       
       def engines
@@ -27,6 +27,15 @@ module Buildr
         
       # Returns the documentation tool options.
       attr_reader :options
+      
+      class << self
+        attr_accessor :language, :source_ext
+        
+        def specify(options)
+          @language = options[:language]
+          @source_ext = options[:source_ext]
+        end
+      end
 
       def initialize(*args) #:nodoc:
         super
@@ -126,9 +135,11 @@ module Buildr
       def prerequisites #:nodoc:
         super + @files + classpath + sourcepath
       end
-      
+
       def source_files #:nodoc:
-        raise 'Unimplemented method'
+        @source_files ||= @files.map(&:to_s).map do |file|
+          File.directory?(file) ? FileList[File.join(file, "**/*.#{self.class.source_ext}")] : file 
+        end.flatten.reject { |file| @files.exclude?(file) }
       end
 
       def needed?() #:nodoc:
@@ -145,7 +156,9 @@ module Buildr
     end
 
     before_define do |project|
-      JavadocTask.define_task('doc').tap do |doc|     # TODO
+      DocTask = Doc.select project.compile.class.language
+      
+      DocTask.define_task('doc').tap do |doc|
         doc.into project.path_to(:target, :doc)
         doc.using :windowtitle=>project.comment || project.name
       end
@@ -171,5 +184,9 @@ module Buildr
     def doc(*sources, &block)
       task('doc').from(*sources).enhance &block
     end
+  end
+  
+  class Project
+    include Doc
   end
 end

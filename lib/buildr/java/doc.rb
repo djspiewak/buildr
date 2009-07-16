@@ -7,30 +7,16 @@ module Buildr
     # the hard work to calling #from and #using.
     #
     # For example:
-    #   javadoc.from(projects('myapp:foo', 'myapp:bar')).using(:windowtitle=>'My App')
+    #   doc.from(projects('myapp:foo', 'myapp:bar')).using(:windowtitle=>'My App')
     # Or, short and sweet:
     #   desc 'My App'
     #   define 'myapp' do
     #     . . .
-    #     javadoc projects('myapp:foo', 'myapp:bar')
+    #     doc projects('myapp:foo', 'myapp:bar')
     #   end
-    class JavadocEngine < Base
+    class Javadoc < Base
       
-      class << self
-        def lang
-          :java
-        end
-        
-        def name
-          :javadoc
-        end
-      end
-
-      def source_files #:nodoc:
-        @source_files ||= @files.map(&:to_s).
-          map { |file| File.directory?(file) ? FileList[File.join(file, "**/*.java")] : file }.
-          flatten.reject { |file| @files.exclude?(file) }
-      end
+      specify :language => :java, :source_ext => 'java'
 
       def generate(sources, target, options = {})
         cmd_args = [ '-d', target, Buildr.application.options.trace ? '-verbose' : '-quiet' ]
@@ -66,4 +52,4 @@ module Buildr
   end
 end
 
-Buildr::Doc.engines << Buildr::Doc::JavadocEngine
+Buildr::Doc.engines << Buildr::Doc::Javadoc
