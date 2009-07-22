@@ -83,4 +83,27 @@ describe Buildr::CCTask do
     
     thread.exit
   end
+  
+  it 'should detect change to a file' do
+    project, compile, test_compile, filter = setup_cc
+    
+    thread = Thread.new do
+      project.cc.invoke
+    end
+    
+    sleep 0.5
+    
+    compile.should_receive :reenable
+    compile.should_receive :invoke
+    
+    test_compile.should_not_receive :reenable
+    test_compile.should_not_receive :invoke
+    
+    filter.should_not_receive :run
+    
+    touch sources.first
+    sleep(project.cc.delay * 5)
+    
+    thread.exit
+  end
 end
