@@ -203,7 +203,7 @@ module Buildr
     
     first_time do
       desc 'Create the documentation for this project'
-      Project.local_task('doc')
+      Project.local_task :doc
     end
 
     before_define do |project|
