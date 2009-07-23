@@ -29,7 +29,7 @@ module Buildr
         end
         cmd_args += sources.flatten.uniq
         unless Buildr.application.options.dryrun
-          info "Generating Scaladoc for #{name}"
+          info "Generating Scaladoc for #{project.name}"
           trace (['scaladoc'] + cmd_args).join(' ')
           Java.load
           Java.scala.tools.nsc.ScalaDoc.main(cmd_args.to_java(Java.java.lang.String)) == 0 or

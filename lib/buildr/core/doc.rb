@@ -13,9 +13,32 @@ module Buildr
       end
     end
     
+    
     # Base class for any documentation provider.  Defines most
     # common functionality (things like @into@, @from@ and friends).
-    class Base < Rake::Task
+    class Base
+      class << self
+        attr_accessor :language, :source_ext
+        
+        def specify(options)
+          @language = options[:language]
+          @source_ext = options[:source_ext]
+        end
+        
+        def to_sym
+          @symbol ||= name.split('::').last.downcase.to_sym
+        end
+      end
+      
+      attr_reader :project
+      
+      def initialize(project)
+        @project = project
+      end
+    end
+    
+    
+    class DocTask < Rake::Task
       
       # The target directory for the generated documentation files.
       attr_reader :target
@@ -29,18 +52,8 @@ module Buildr
       # Returns the documentation tool options.
       attr_reader :options
       
-      class << self
-        attr_accessor :language, :source_ext
-        
-        def specify(options)
-          @language = options[:language]
-          @source_ext = options[:source_ext]
-        end
-        
-        def to_sym
-          @symbol ||= name.split('::').last.downcase.to_sym
-        end
-      end
+      # :nodoc:
+      attr_reader :project
 
       def initialize(*args) #:nodoc:
         super
@@ -51,7 +64,10 @@ module Buildr
         enhance do |task|
           rm_rf target.to_s
           mkdir_p target.to_s
-          generate source_files, File.expand_path(target.to_s), options.merge(:classpath=>classpath, :sourcepath=>sourcepath)
+          
+          engine.generate(source_files, File.expand_path(target.to_s),
+            options.merge(:classpath => classpath, :sourcepath => sourcepath))
+          
           touch target.to_s
         end
       end
@@ -110,6 +126,10 @@ module Buildr
         args.each { |key| @options[key.to_sym] = true }
         self
       end
+      
+      def engine
+        @engine ||= guess_engine
+      end
 
       # :call-seq:
       #   from(*sources) => self
@@ -145,14 +165,26 @@ module Buildr
 
       def source_files #:nodoc:
         @source_files ||= @files.map(&:to_s).map do |file|
-          File.directory?(file) ? FileList[File.join(file, "**/*.#{self.class.source_ext}")] : file 
+          File.directory?(file) ? FileList[File.join(file, "**/*.#{engine.class.source_ext}")] : file 
         end.flatten.reject { |file| @files.exclude?(file) }
       end
 
-      def needed?() #:nodoc:
+      def needed? #:nodoc:
         return false if source_files.empty?
         return true unless File.exist?(target.to_s)
         source_files.map { |src| File.stat(src.to_s).mtime }.max > File.stat(target.to_s).mtime
+      end
+      
+    private
+    
+      def guess_engine
+        doc_engine = Doc.select project.compile.language
+        fail 'Unable to guess documentation provider for project.' unless doc_engine
+        doc_engine.new project
+      end
+      
+      def associate_with(project)
+        @project ||= project
       end
     end
     
@@ -163,9 +195,8 @@ module Buildr
     end
 
     before_define do |project|
-      DocTask = Doc.select project.compile.language
-      
       DocTask.define_task('doc').tap do |doc|
+        doc.send(:associate_with, project)
         doc.into project.path_to(:target, :doc)
         doc.using :windowtitle=>project.comment || project.name
       end
@@ -197,6 +228,7 @@ module Buildr
       doc(sources, block)
     end
   end
+  
   
   class Project
     include Doc

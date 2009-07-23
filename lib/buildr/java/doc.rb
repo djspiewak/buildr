@@ -17,7 +17,7 @@ module Buildr
     class Javadoc < Base
       
       specify :language => :java, :source_ext => 'java'
-
+      
       def generate(sources, target, options = {})
         cmd_args = [ '-d', target, Buildr.application.options.trace ? '-verbose' : '-quiet' ]
         options.reject { |key, value| [:sourcepath, :classpath].include?(key) }.
@@ -41,7 +41,7 @@ module Buildr
         end
         cmd_args += sources.flatten.uniq
         unless Buildr.application.options.dryrun
-          info "Generating Javadoc for #{name}"
+          info "Generating Javadoc for #{project.name}"
           trace (['javadoc'] + cmd_args).join(' ')
           Java.load
           Java.com.sun.tools.javadoc.Main.execute(cmd_args.to_java(Java.java.lang.String)) == 0 or
