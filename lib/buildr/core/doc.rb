@@ -3,9 +3,16 @@ module Buildr
     include Extension
     
     class << self
-      def select(lang)
-        fail 'Unable to define doc task for nil language' if lang == nil
+      def select_by_lang(lang)
+        fail 'Unable to define doc task for nil language' if lang.nil?
         engines.detect { |e| e.language.to_sym == lang.to_sym }
+      end
+      
+      alias_method :select, :select_by_lang
+      
+      def select_by_name(name)
+        fail 'Unable to define doc task for nil' if name.nil?
+        engines.detect { |e| e.to_sym == name.to_sym }
       end
       
       def engines
@@ -120,10 +127,15 @@ module Buildr
       #
       # For example:
       #   doc.using :windowtitle=>'My application'
+      #   doc.using :vscaladoc
       def using(*args)
-        # TODO  need to be able to select different engines (e.g. vscaladoc)
         args.pop.each { |key, value| @options[key.to_sym] = value } if Hash === args.last
-        args.each { |key| @options[key.to_sym] = true }
+        
+        until args.empty?
+          new_engine = doc.select_by_name(args.pop)
+          @engine = new_engine unless new_engine.nil?
+        end
+        
         self
       end
       
