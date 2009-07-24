@@ -40,6 +40,7 @@ module Buildr
     
     class VScaladoc < Base
       VERSION = '1.2-SNAPSHOT'
+      Buildr.repositories.remote << 'http://scala-tools.org/repo-snapshots'
       
       class << self
         def dependencies
