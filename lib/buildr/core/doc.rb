@@ -3,9 +3,16 @@ module Buildr
     include Extension
     
     class << self
-      def select(lang)
-        fail 'Unable to define doc task for nil language' if lang == nil
+      def select_by_lang(lang)
+        fail 'Unable to define doc task for nil language' if lang.nil?
         engines.detect { |e| e.language.to_sym == lang.to_sym }
+      end
+      
+      alias_method :select, :select_by_lang
+      
+      def select_by_name(name)
+        fail 'Unable to define doc task for nil' if name.nil?
+        engines.detect { |e| e.to_sym == name.to_sym }
       end
       
       def engines
@@ -13,9 +20,32 @@ module Buildr
       end
     end
     
+    
     # Base class for any documentation provider.  Defines most
     # common functionality (things like @into@, @from@ and friends).
-    class Base < Rake::Task
+    class Base
+      class << self
+        attr_accessor :language, :source_ext
+        
+        def specify(options)
+          @language = options[:language]
+          @source_ext = options[:source_ext]
+        end
+        
+        def to_sym
+          @symbol ||= name.split('::').last.downcase.to_sym
+        end
+      end
+      
+      attr_reader :project
+      
+      def initialize(project)
+        @project = project
+      end
+    end
+    
+    
+    class DocTask < Rake::Task
       
       # The target directory for the generated documentation files.
       attr_reader :target
@@ -29,18 +59,8 @@ module Buildr
       # Returns the documentation tool options.
       attr_reader :options
       
-      class << self
-        attr_accessor :language, :source_ext
-        
-        def specify(options)
-          @language = options[:language]
-          @source_ext = options[:source_ext]
-        end
-        
-        def to_sym
-          @symbol ||= name.split('::').last.downcase.to_sym
-        end
-      end
+      # :nodoc:
+      attr_reader :project
 
       def initialize(*args) #:nodoc:
         super
@@ -51,7 +71,10 @@ module Buildr
         enhance do |task|
           rm_rf target.to_s
           mkdir_p target.to_s
-          generate source_files, File.expand_path(target.to_s), options.merge(:classpath=>classpath, :sourcepath=>sourcepath)
+          
+          engine.generate(source_files, File.expand_path(target.to_s),
+            options.merge(:classpath => classpath, :sourcepath => sourcepath))
+          
           touch target.to_s
         end
       end
@@ -104,11 +127,20 @@ module Buildr
       #
       # For example:
       #   doc.using :windowtitle=>'My application'
+      #   doc.using :vscaladoc
       def using(*args)
-        # TODO  need to be able to select different engines (e.g. vscaladoc)
         args.pop.each { |key, value| @options[key.to_sym] = value } if Hash === args.last
-        args.each { |key| @options[key.to_sym] = true }
+        
+        until args.empty?
+          new_engine = Doc.select_by_name(args.pop)
+          @engine = new_engine.new(project) unless new_engine.nil?
+        end
+        
         self
+      end
+      
+      def engine
+        @engine ||= guess_engine
       end
 
       # :call-seq:
@@ -145,27 +177,38 @@ module Buildr
 
       def source_files #:nodoc:
         @source_files ||= @files.map(&:to_s).map do |file|
-          File.directory?(file) ? FileList[File.join(file, "**/*.#{self.class.source_ext}")] : file 
+          File.directory?(file) ? FileList[File.join(file, "**/*.#{engine.class.source_ext}")] : file 
         end.flatten.reject { |file| @files.exclude?(file) }
       end
 
-      def needed?() #:nodoc:
+      def needed? #:nodoc:
         return false if source_files.empty?
         return true unless File.exist?(target.to_s)
         source_files.map { |src| File.stat(src.to_s).mtime }.max > File.stat(target.to_s).mtime
+      end
+      
+    private
+    
+      def guess_engine
+        doc_engine = Doc.select project.compile.language
+        fail 'Unable to guess documentation provider for project.' unless doc_engine
+        doc_engine.new project
+      end
+      
+      def associate_with(project)
+        @project ||= project
       end
     end
     
     
     first_time do
       desc 'Create the documentation for this project'
-      Project.local_task('doc')
+      Project.local_task :doc
     end
 
     before_define do |project|
-      DocTask = Doc.select project.compile.language
-      
       DocTask.define_task('doc').tap do |doc|
+        doc.send(:associate_with, project)
         doc.into project.path_to(:target, :doc)
         doc.using :windowtitle=>project.comment || project.name
       end
@@ -197,6 +240,7 @@ module Buildr
       doc(sources, block)
     end
   end
+  
   
   class Project
     include Doc
