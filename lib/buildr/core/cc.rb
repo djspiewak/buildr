@@ -39,7 +39,12 @@ module Buildr
     
     def monitor_and_compile
       # we don't want to actually fail if our dependencies don't succede
-      [:compile, 'test:compile'].each { |name| project.task(name).invoke }
+      begin
+        [:compile, 'test:compile'].each { |name| project.task(name).invoke }
+      rescue Exception => ex
+        $stderr.puts $terminal.color(ex.message, :red)
+        $stderr.puts
+      end
       
       main_dirs = project.compile.sources.map(&:to_s)
       test_dirs = project.task('test:compile').sources.map(&:to_s)
@@ -89,11 +94,17 @@ module Buildr
           project.task(:compile).reenable if in_main
           project.task('test:compile').reenable if in_test
           
-          project.task(:resources).filter.run if in_res
-          project.task(:compile).invoke
-          project.task('test:compile').invoke
+          successful = true
+          begin
+            project.task(:resources).filter.run if in_res
+            project.task(:compile).invoke if in_main
+            project.task('test:compile').invoke if in_test
+          rescue Exception => ex
+            $stderr.puts $terminal.color(ex.message, :red)
+            successful = false
+          end
           
-          puts $terminal.color("Build complete", :green)
+          puts $terminal.color("Build complete", :green) if successful
         end
       end
     end
