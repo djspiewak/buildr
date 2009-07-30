@@ -107,23 +107,6 @@ define 'killer-app' do
 end
 {% endhighlight %}
 
-Unfortunate as it may seem, not all libraries are available in Maven repositories.  While most of the major libraries (e.g. Hibernate, Spring, etc) are kept updated by intrepid volunteers, some of the more obscure frameworks are left out in the cold.  An example of one such framework is "DBPool":http://www.snaq.net/java/DBPool, a very fast connection pool designed to integrate with JDBC.  However, like most Java libraries, DBPool does provide a zip archive which contains the JAR file, as well as some documentation and perhaps a license or two.
-
-Almost magically, we can instruct Buildr to get the DBPool artifact from this URL.  Buildr will treat this download just like any other artifact, retrieving it when requried by the @compile@ task.  However, unlike a normal Maven artifact, Buildr will do some extra processing once the download is complete.  It will actually dig into the downloaded archive, detect and extract the JAR file, installing it into the local repository just like any other artifact:
-
-{% highlight ruby %}
-DBPOOL = 'net.snaq:dbpool:jar:4.8.3'
-download artifact(DBPOOL) => 'http://www.snaq.net/java/DBPool/DBPool_v4.8.3.zip'
-
-define 'killer-app' do
-  project.version = '0.1.0'
-  compile.with DBPOOL
-  package :jar
-end
-{% endhighlight %}
-
-This is one area where Buildr's dependency management vastly excedes Maven's.  With Maven, you would have to install the DBPool dependency manually.  Buildr's auto-magical download and extraction keeps the dependency definitions centralized within the buildfile, available to your entire team and automatically resolved as needed by the compilation tasks.
-
 
 h2(#testing). Testing
 
