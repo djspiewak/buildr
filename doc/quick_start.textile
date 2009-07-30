@@ -107,6 +107,20 @@ define 'killer-app' do
 end
 {% endhighlight %}
 
+Unfortunately, not all libraries are available in the Maven repositories.  If we were using Maven, the only way to make use of such a library would be to download the relevant JAR files and then install them into our local repository by hand.  Maven would generate a command to accomplish this task, but this extra step is still somewhat clumsy.  With Buildr, we can eliminate an entire step from this unfortunate debacle:
+
+{% highlight ruby %}
+repositories.remote << 'http://www.ibiblio.org/maven2'
+
+define 'killer-app' do
+  project.version = '0.1.0'
+  compile.with '~/Libraries/DBPool-4.8.3/DBPool_v4.8.3.jar'
+  package :jar
+end
+{% endhighlight %}
+
+The trick is that the @compile.with@ directive is really much more powerful than it would first seem.  Not only can we pass in artifact descriptors, we can also specify paths on our local file system.  Such JAR files will be included on the project's classpath without ever needing to be installed in the local repository.
+
 
 h2(#testing). Testing
 
