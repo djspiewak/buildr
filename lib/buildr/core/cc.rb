@@ -89,11 +89,11 @@ module Buildr
           project.task(:compile).reenable if in_main
           project.task('test:compile').reenable if in_test
           
-          success = if in_res then project.task(:resources).filter.run else true end
-          success = project.task(:compile).invoke && success
-          success = project.task('test:compile').invoke && success
+          project.task(:resources).filter.run if in_res
+          project.task(:compile).invoke
+          project.task('test:compile').invoke
           
-          puts $terminal.color("Build complete", success ? :green : :red)
+          puts $terminal.color("Build complete", :green)
         end
       end
     end
