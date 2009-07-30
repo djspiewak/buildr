@@ -116,8 +116,8 @@ DBPOOL = 'net.snaq:dbpool:jar:4.8.3'
 download artifact(DBPOOL) => 'http://www.snaq.net/java/DBPool/DBPool_v4.8.3.zip'
 
 define 'killer-app' do
-  project.version '0.1.0'
-  compile.with DBPool
+  project.version = '0.1.0'
+  compile.with DBPOOL
   package :jar
 end
 {% endhighlight %}
