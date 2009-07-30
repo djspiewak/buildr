@@ -4,12 +4,49 @@ require 'buildr/core/util'
 
 module Buildr
   module Shell
+
+    class BeanShell < Base
+      
+      include JavaRebel
+      
+      VERSION = '2.0b4'
+
+      class << self
+        def version
+          Buildr.settings.build['bsh'] || VERSION
+        end
+        
+        def artifact
+          "org.beanshell:bsh:jar:#{version}"
+        end
+        
+        def lang
+          :java
+        end
+        
+        def to_sym
+          :bsh
+        end
+      end
+      
+      def launch
+        cp = project.compile.dependencies + [project.path_to(:target, :classes), Buildr.artifact(BeanShell.artifact)]
+        Java::Commands.java 'bsh.Console', {
+          :properties => rebel_props(project),
+          :classpath => cp,
+          :java_args => rebel_args
+        }
+      end
+      
+    end # BeanShell
+
+        
     class JIRB < Base
       include JavaRebel
       
       JRUBY_VERSION = '1.3.1'
       
-      class << self
+      class << self        
         def lang
           :none
         end
@@ -60,7 +97,7 @@ module Buildr
           }
         else
           cp = project.compile.dependencies + [
-              "org.jruby:jruby-complete:jar:#{JRUBY_VERSION}",
+              jruby_artifact,
               project.path_to(:target, :classes)
             ]
           
@@ -73,8 +110,14 @@ module Buildr
       end
     private
       def jruby_home
-        @home ||= ENV['JRUBY_HOME']
+        @jruby_home ||= RUBY_PLATFORM =~ /java/ ? Config::CONFIG['prefix'] : ENV['JRUBY_HOME']
       end
+
+      def jruby_artifact
+        version = Buildr.settings.build['jruby'] || JRUBY_VERSION
+        "org.jruby:jruby-complete:jar:#{version}"
+      end
+    
     end
     
     class Clojure < Base
@@ -134,5 +177,6 @@ module Buildr
   end
 end
 
+Buildr::ShellProviders << Buildr::Shell::BeanShell
 Buildr::ShellProviders << Buildr::Shell::JIRB
 Buildr::ShellProviders << Buildr::Shell::Clojure

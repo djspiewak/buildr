@@ -311,8 +311,29 @@ end
 
 if Buildr::Util.java_platform?
   require 'ffi'
+
+  # Fix for BUILDR-292.
+  # JRuby fails to rename a file on different devices
+  # this monkey-patch wont be needed when JRUBY-3381 gets resolved.
+  module FileUtils #:nodoc:
+    alias_method :__mv_native, :mv
+
+    def mv(from, to, options = nil)
+      dir_to = File.directory?(to) ? to : File.dirname(to)
+      Array(from).each do |from|
+        dir_from = File.dirname(from)
+        if File.stat(dir_from).dev != File.stat(dir_to).dev
+          cp from, to, options
+          rm from, options
+        else
+          __mv_native from, to, options
+        end
+      end
+    end
+    private :mv
+  end
   
-  module RakeFileUtils
+  module RakeFileUtils #:nodoc:
     def rake_merge_option(args, defaults)
       defaults[:verbose] = false if defaults[:verbose] == :default
       
@@ -383,8 +404,10 @@ if Buildr::Util.java_platform?
 
   module FileUtils
     extend FFI::Library
+    alias_method :__jruby_system__, :system
     attach_function :system, [:string], :int
     alias_method :__native_system__, :system
+    alias_method :system, :__jruby_system__
     
     # code "borrowed" directly from Rake
     def sh(*cmd, &block)
