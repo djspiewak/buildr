@@ -349,10 +349,6 @@ module Buildr
       task :html =>checkstyle_html
         
     end
-
-    task "clean" do
-      clean(checkstyle)
-    end
   end
 end
 
