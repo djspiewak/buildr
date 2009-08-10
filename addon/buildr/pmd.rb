@@ -136,7 +136,7 @@ module Buildr
         if dir.empty?
           @report_dir ||= project.path_to(:reports, :pmd)
         else
-          raise "Invalid report dir '#{dir.join(', ')}" unless dir.size == 1
+          fail "Invalid report dir '#{dir.join(', ')}" unless dir.size == 1
           @report_dir = dir[0]
           self
         end
@@ -149,7 +149,7 @@ module Buildr
         if file.empty?
           @data_file ||= project.path_to(:reports, 'pmd.data')
         else
-          raise "Invalid data file '#{file.join(', ')}" unless file.size == 1
+          fail "Invalid data file '#{file.join(', ')}" unless file.size == 1
           @data_file = file[0]
           self
         end
@@ -188,7 +188,7 @@ module Buildr
         if max_violations.empty?
           @max_violations ||= Checkstyle.settings['max.violations']
         else
-          raise "Invalid violations value '#{max_violations.join(', ')}" unless max_violations.size == 1
+          fail "Invalid violations value '#{max_violations.join(', ')}" unless max_violations.size == 1
           @max_violations = max_violations[0]
           self
         end
@@ -201,7 +201,7 @@ module Buildr
         if style.empty?
           @html_style
         else
-          raise "Invalid violations value '#{style.join(', ')}" unless style.size == 1
+          fail "Invalid violations value '#{style.join(', ')}" unless style.size == 1
           @html_style = style[0]
           self
         end
@@ -214,7 +214,7 @@ module Buildr
         if fail_on_violation.empty?
           @fail ||= (PMD.settings['fail.on.violation'] || false).to_s
         else
-          raise "Invalid violations value '#{fail_on_violation.join(', ')}" unless fail_on_violation.size == 1
+          fail "Invalid violations value '#{fail_on_violation.join(', ')}" unless fail_on_violation.size == 1
           @fail = fail_on_violation[0]
           self
         end
@@ -227,7 +227,7 @@ module Buildr
         if short_filenames.empty?
           @short_names ||= (Checkstyle.settings['short.names'] || true).to_s
         else
-          raise "Invalid violations value '#{short_filenames.join(', ')}" unless short_filenames.size == 1
+          fail "Invalid violations value '#{short_filenames.join(', ')}" unless short_filenames.size == 1
           @short_names = short_filenames[0]
           self
         end
@@ -335,7 +335,7 @@ module Buildr
           rules = Buildr.projects.map(&:pmd).map(&:rules).uniq.reject {|rule|
             rule.nil? || rule.empty?
           }
-          raise "Could not set pmd rules from projects, existing configs: '#{rules.join(', ')}'" if rules.size != 1
+          fail "Could not set pmd rules from projects, existing configs: '#{rules.join(', ')}'" if rules.size != 1
           pmd.rules(rules[0])
         end
         create_xml(pmd)
@@ -345,7 +345,7 @@ module Buildr
           styles = Buildr.projects.map(&:pmd).map(&:style).uniq.reject{|style|
             style.nil? || style.strip.empty?
           }
-          raise "Could not set html style from projects, existing styles: '#{styles.join(', ')}'" if styles.size != 1
+          fail "Could not set html style from projects, existing styles: '#{styles.join(', ')}'" if styles.size != 1
           pmd.style(styles[0])
         end
         create_html(pmd)

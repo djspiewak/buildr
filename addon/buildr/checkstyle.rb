@@ -135,7 +135,7 @@ module Buildr
         if dir.empty?
           @report_dir ||= project.path_to(:reports, :checkstyle)
         else
-          raise "Invalid report dir '#{dir.join(', ')}" unless dir.size == 1
+          fail "Invalid report dir '#{dir.join(', ')}" unless dir.size == 1
           @report_dir = dir[0]
           self
         end
@@ -148,7 +148,7 @@ module Buildr
         if file.empty?
           @data_file ||= project.path_to(:reports, 'checkstyle.data')
         else
-          raise "Invalid report dir '#{file.join(', ')}" unless file.size == 1
+          fail "Invalid report dir '#{file.join(', ')}" unless file.size == 1
           @data_file = file[0]
           self
         end
@@ -161,7 +161,7 @@ module Buildr
         if file.empty?
           @config_file
         else
-          raise "Invalid config file '#{file.join(', ')}" unless file.size == 1
+          fail "Invalid config file '#{file.join(', ')}" unless file.size == 1
           @config_file = file[0]
           self
         end
@@ -174,7 +174,7 @@ module Buildr
         if html_style.empty?
           @html_style
         else
-          raise "Invalid html style file '#{html_style.join(', ')}" unless html_style.size == 1
+          fail "Invalid html style file '#{html_style.join(', ')}" unless html_style.size == 1
           @html_style = html_style[0]
           self
         end
@@ -187,7 +187,7 @@ module Buildr
         if fail_on_violation.empty?
           @fail ||= (Checkstyle.settings['fail.on.violation'] || true).to_s
         else
-          raise "Invalid config file '#{fail_on_violation.join(', ')}" unless fail_on_violation.size == 1
+          fail "Invalid config file '#{fail_on_violation.join(', ')}" unless fail_on_violation.size == 1
           @fail = fail_on_violation[0]
           self
         end
@@ -200,7 +200,7 @@ module Buildr
         if max_errors.empty?
           @max_errors ||= (Checkstyle.settings['max.errors'] || 0).to_s
         else
-          raise "Invalid max errors value '#{max_errors.join(', ')}" unless max_errors.size == 1
+          fail "Invalid max errors value '#{max_errors.join(', ')}" unless max_errors.size == 1
           @max_errors = max_errors[0]
           self
         end
@@ -213,7 +213,7 @@ module Buildr
         if max_warnings.empty?
           @max_warnings ||= (Checkstyle.settings['max.warnings'] || 0).to_s
         else
-          raise "Invalid max warnings value '#{max_warnings.join(', ')}" unless max_warnings.size == 1
+          fail "Invalid max warnings value '#{max_warnings.join(', ')}" unless max_warnings.size == 1
           @max_warnings = max_warnings[0]
           self
         end
@@ -323,7 +323,7 @@ module Buildr
           configs = Buildr.projects.map(&:checkstyle).map(&:config).uniq.reject {|conf|
             conf.nil? || conf.strip.empty?
           }
-          raise "Could not set checkstyle config from projects, existing configs: '#{configs.join(', ')}'" if configs.size != 1
+          fail "Could not set checkstyle config from projects, existing configs: '#{configs.join(', ')}'" if configs.size != 1
           info "Setting checkstyle config to '#{configs[0]}'"
           checkstyle.config(configs[0])
         end
@@ -334,7 +334,7 @@ module Buildr
           styles = Buildr.projects.map(&:checkstyle).map(&:style).uniq.reject{|style|
             style.nil? || style.strip.empty?
           }
-          raise "Could not set html style from projects, existing styles: '#{styles.join(', ')}'" if styles.size != 1
+          fail "Could not set html style from projects, existing styles: '#{styles.join(', ')}'" if styles.size != 1
           info "Setting checkstyle html style to '#{styles[0]}'"
           checkstyle.style(styles[0])
         end
