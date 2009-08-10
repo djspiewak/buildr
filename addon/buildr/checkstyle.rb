@@ -315,40 +315,6 @@ module Buildr
     class Buildr::Project
       include CheckstyleExtension
     end
-
-    namespace "checkstyle" do
-      checkstyle_xml = file checkstyle.data_file do
-        checkstyle.sources(Buildr.projects.map(&:checkstyle).map(&:sources).flatten)
-        unless checkstyle.config
-          configs = Buildr.projects.map(&:checkstyle).map(&:config).uniq.reject {|conf|
-            conf.nil? || conf.strip.empty?
-          }
-          fail "Could not set checkstyle config from projects, existing configs: '#{configs.join(', ')}'" if configs.size != 1
-          info "Setting checkstyle config to '#{configs[0]}'"
-          checkstyle.config(configs[0])
-        end
-        create_xml(checkstyle)
-      end
-      checkstyle_html = file checkstyle.html_out => checkstyle_xml do
-        unless checkstyle.style
-          styles = Buildr.projects.map(&:checkstyle).map(&:style).uniq.reject{|style|
-            style.nil? || style.strip.empty?
-          }
-          fail "Could not set html style from projects, existing styles: '#{styles.join(', ')}'" if styles.size != 1
-          info "Setting checkstyle html style to '#{styles[0]}'"
-          checkstyle.style(styles[0])
-        end
-        create_html(checkstyle)
-      end
-      file checkstyle.report_to => checkstyle_html
-      
-      desc "Create checkstyle xml report in #{checkstyle.report_to.to_s}"
-      task :xml => checkstyle_xml
-
-      desc "Create checkstyle html report in #{checkstyle.report_to.to_s}"
-      task :html =>checkstyle_html
-        
-    end
   end
 end
 

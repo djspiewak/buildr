@@ -326,41 +326,6 @@ module Buildr
     class Buildr::Project
       include PMDExtension
     end
-
-    namespace "pmd" do
-      # all result dirs and files as base targets
-      pmd_xml = file pmd.data_file do
-        pmd.sources(Buildr.projects.map(&:pmd).map(&:sources).flatten)
-        unless pmd.rules
-          rules = Buildr.projects.map(&:pmd).map(&:rules).uniq.reject {|rule|
-            rule.nil? || rule.empty?
-          }
-          fail "Could not set pmd rules from projects, existing configs: '#{rules.join(', ')}'" if rules.size != 1
-          pmd.rules(rules[0])
-        end
-        create_xml(pmd)
-      end
-      pmd_html = file pmd.html_out => pmd_xml do
-        unless pmd.style
-          styles = Buildr.projects.map(&:pmd).map(&:style).uniq.reject{|style|
-            style.nil? || style.strip.empty?
-          }
-          fail "Could not set html style from projects, existing styles: '#{styles.join(', ')}'" if styles.size != 1
-          pmd.style(styles[0])
-        end
-        create_html(pmd)
-      end
-      file pmd.report_to => pmd_html
-      
-      desc "Create pmd xml report in #{pmd.report_to.to_s}"
-      task :xml => pmd_xml
-      desc "Create pmd html report in #{pmd.report_to.to_s}"
-      task :html => pmd_html
-    end
-
-    task "clean" do
-      clean(pmd)
-    end
   end
 end
 
