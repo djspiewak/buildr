@@ -279,6 +279,9 @@ module Buildr
 
       before_define do
         namespace 'pmd' do
+          desc "Creates an pmd xml report"
+          task :xml
+          
           desc "Creates an pmd html report"
           task :html
 
