@@ -104,9 +104,20 @@ module Buildr
             successful = false
           end
           
+          notify_build_status(successful, project.path)
           puts $terminal.color("Build complete", :green) if successful
         end
       end
+    end
+    
+    def notify_build_status(successful, title)
+       if RUBY_PLATFORM =~ /darwin/ && $stdout.isatty && verbose
+         if successful
+           notify['Completed', title, 'Build complete']
+         else
+           notify['Failed', title, 'Build failed']
+         end
+       end
     end
     
     def check_mtime(pattern, old_times)
