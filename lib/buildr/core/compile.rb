@@ -122,7 +122,7 @@ module Buildr
         map = compile_map(sources, target)
         return false if map.empty?
         return true unless File.exist?(target.to_s)
-        source_files_not_yet_compiled = map.select { |source, target| !File.exist?(target) }
+        source_files_not_yet_compiled = map.select { |source, target| !File.exist?(target) }.to_a
         trace "Compile needed because source file #{source_files_not_yet_compiled[0][0]} has no corresponding #{source_files_not_yet_compiled[0][1]}" unless source_files_not_yet_compiled.empty?
         return true if map.any? { |source, target| !File.exist?(target) || File.stat(source).mtime > File.stat(target).mtime }
         oldest = map.map { |source, target| File.stat(target).mtime }.min
@@ -175,14 +175,32 @@ module Buildr
             FileList["#{source}/**/*.{#{ext_glob}}"].reject { |file| File.directory?(file) }.
               each { |file| map[file] = File.join(target, Util.relative_path(file, source).ext(target_ext)) }
           else
-            map[source] = target # File.join(target, File.basename(source).ext(target_ext))
+            # try to extract package name from .java or .scala files
+            if ['.java', '.scala', '.groovy'].include? File.extname(source)
+              package = findFirst(source, /^\s*package\s+(\S+)\s*;?\s*$/)
+              map[source] = package ? File.join(target, package[1].gsub('.', '/'), File.basename(source).ext(target_ext)) : target
+            elsif
+              map[source] = target
+            end
           end
           map
         end
       end
-      
-    end
 
+    private
+      
+      def findFirst(file, pattern)
+        match = nil
+        File.open(file, "r") do |infile|
+          while (line = infile.gets)
+            match = line.match(pattern)
+            break if match
+          end
+        end
+        match
+      end
+
+    end
   end
 
 

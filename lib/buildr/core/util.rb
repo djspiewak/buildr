@@ -260,7 +260,9 @@ class Hash
         # and the Hash doesn't work the way we need it to.  Unfortunately, we can call toString on MRI's object,
         # but not on the JRuby one; calling to_s on the JRuby object returns what we need, but ... you guessed it.
         #  So this seems like the one hack to unite them both.
-        key = Java.java.lang.String.valueOf(keys.next)
+        #key = Java.java.lang.String.valueOf(keys.next.to_s)
+        key = keys.next
+        key = key.toString unless String === key
         hash[key] = java_properties.getProperty(key)
       end
       hash
@@ -439,8 +441,7 @@ if Buildr::Util.java_platform?
           __native_system__(cd + cmd.first + ' ' + arg_str.join(' '))
         end
         $? = Buildr::ProcessStatus.new(0, res == 0, res)    # KLUDGE
-        
-        block.call(res, $?)
+        block.call(res == 0, $?)
       end
     end
 

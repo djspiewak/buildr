@@ -48,7 +48,7 @@ module Buildr
   module TestFramework::JRubyBased
     extend self
 
-    VERSION = '1.1.6'
+    VERSION = '1.3.1'
 
     class << self
       def version
@@ -94,7 +94,7 @@ module Buildr
       
       Buildr.write(runner.file, runner.content)
       rm_f runner.result
-      
+
       if RUBY_PLATFORM[/java/] && !options.fork
         runtime = new_runtime
         runtime.getObject.java.lang.System.getProperties().putAll(options[:properties] || {})
@@ -109,7 +109,7 @@ module Buildr
       if Exception === result
         raise [result.message, result.backtrace].flatten.join("\n")
       end
-      result.succeeded
+      tests - result.failed
     end
 
     def jruby_home
@@ -201,9 +201,13 @@ module Buildr
       runner.gems ||= {}
       runner.rspec ||= ['--format', 'progress', '--format', "html:#{runner.html_report}"]
       runner.format.each { |format| runner.rspec << '--format' << format } if runner.format
-      runner.rspec.push '--format', "Buildr::TestFramework::TestResult::YamlFormatter:#{runner.result}"
+      runner.rspec.push '--format', "#{runner_formatter}:#{runner.result}"
       runner
-    end    
+    end
+    
+    def runner_formatter
+      "Buildr::TestFramework::TestResult::YamlFormatter"
+    end
     
   end
 
@@ -267,7 +271,8 @@ module Buildr
         argv.push *<%= tests.inspect %>
         parser.order!(argv)
         $rspec_options = parser.options
-        Buildr::TestFramework::TestResult::Error.guard('<%= runner.file %>') do
+        
+        Buildr::TestFramework::TestResult::Error.guard('<%= runner.result %>') do
           ::Spec::Runner::CommandLine.run($rspec_options)
         end
         exit 0 # let buildr figure the result from the yaml file
@@ -376,6 +381,10 @@ module Buildr
     def runner_content(binding)
       runner_erb = File.join(File.dirname(__FILE__), 'jtestr_runner.rb.erb')
       Filter::Mapper.new(:erb, binding).transform(File.read(runner_erb), runner_erb)
+    end
+    
+    def runner_formatter
+      'Buildr::TestFramework::TestResult::JtestRYamlFormatter'
     end
     
   end

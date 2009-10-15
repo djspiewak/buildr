@@ -216,6 +216,7 @@ describe Buildr::JUnit do
     JAVA
     define('foo').test.using :properties=>{ 'name'=>'value' }
     project('foo').test.invoke
+    project('foo').test.options[:properties]["baseDir"].should eql(project("foo").test.compile.target.to_s)
   end
 
   it 'should pass environment to JVM' do
@@ -429,6 +430,27 @@ describe Buildr::TestNG do
   it 'should fail when TestNG test case fails' do
     write 'src/test/java/FailingTest.java', <<-JAVA
       public class FailingTest {
+        @org.testng.annotations.Test
+        public void testNothing() {
+          org.testng.AssertJUnit.assertTrue(false);
+        }
+      }
+    JAVA
+    define('foo') { test.using(:testng) }
+    lambda { project('foo').test.invoke }.should raise_error(RuntimeError, /Tests failed/)
+  end
+
+  it 'should fail when multiple TestNG test case fail' do
+    write 'src/test/java/FailingTest1.java', <<-JAVA
+      public class FailingTest1 {
+        @org.testng.annotations.Test
+        public void testNothing() {
+          org.testng.AssertJUnit.assertTrue(false);
+        }
+      }
+    JAVA
+    write 'src/test/java/FailingTest2.java', <<-JAVA
+      public class FailingTest2 {
         @org.testng.annotations.Test
         public void testNothing() {
           org.testng.AssertJUnit.assertTrue(false);

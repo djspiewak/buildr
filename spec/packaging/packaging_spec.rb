@@ -168,6 +168,62 @@ describe Project, '#package' do
     lambda { define('foo') { package(:weirdo) } }.should raise_error(RuntimeError, /Don't know how to create a package/)
   end
 
+  it 'should call package_as_foo when using package(:foo)' do
+    class Buildr::Project  
+      def package_as_foo(file_name)
+        file(file_name) do |t|
+          mkdir_p File.dirname(t.to_s)
+          File.open(t.to_s, 'w') {|f| f.write('foo') }
+        end
+      end
+    end
+    define('foo', :version => '1.0') do |project|
+      package(:foo).invoke
+      package(:foo).should exist
+      package(:foo).should contain('foo')
+    end
+  end
+
+  it 'should allow to respec package(:sources) using package_as_sources_spec()' do
+    class Buildr::Project  
+      def package_as_sources_spec(spec)
+        spec.merge({ :type=>:jar, :classifier=>'sources' })
+      end
+    end
+    define('foo', :version => '1.0') do
+      package(:sources).type.should eql(:jar)
+      package(:sources).classifier.should eql('sources')
+    end
+  end
+  
+  it 'should produce different packages for different specs' do
+    class Buildr::Project  
+      def package_as_foo(file_name)
+        file(file_name)  
+      end
+      
+      def package_as_foo_spec(spec)
+        spec.merge(:type => :zip)
+      end
+      
+      def package_as_bar(file_name)
+        file(file_name)
+      end
+      
+      def package_as_bar_spec(spec)
+        spec.merge(:type => :zip, :classifier => "foobar")
+      end
+      
+    end
+    define('foo', :version => '1.0') do
+      package(:foo).type.should eql(:zip)
+      package(:foo).classifier.should be_nil
+      package(:bar).type.should eql(:zip)
+      package(:bar).classifier.should eql('foobar')
+      package(:foo).equal?(package(:bar)).should be_false
+    end
+  end
+
   it 'should default to no classifier' do
     define 'foo', :version=>'1.0' do
       package.classifier.should be_nil
@@ -203,8 +259,17 @@ describe Project, '#package' do
       package(:war)
       package(:jar, :id=>'bar')
       package(:jar, :classifier=>'srcs')
+      package(:jar, :classifier=>'doc')
     end
-    project('foo').packages.uniq.size.should be(4)
+    project('foo').packages.uniq.size.should be(5)
+  end
+
+  it 'should create different tasks for package with classifier' do
+    define 'foo', :version=>'1.0' do
+      package(:jar)
+      package(:jar, :classifier=>'foo')
+    end
+    project('foo').packages.uniq.size.should be(2)
   end
 
   it 'should not create multiple packages for the same spec' do
@@ -213,8 +278,9 @@ describe Project, '#package' do
       package(:war)
       package(:jar, :id=>'bar')
       package(:jar, :id=>'bar')
+      package(:jar, :id=>'baz')
     end
-    project('foo').packages.uniq.size.should be(2)
+    project('foo').packages.uniq.size.should be(3)
   end
 
   it 'should return the same task for subsequent calls' do
@@ -297,6 +363,35 @@ POM
     #task('artifacts').instance_eval { @actions.clear }
     define('foo', :group=>'bar', :version=>'1.0') { package(:jar) }
     lambda { task('artifacts').invoke }.should_not raise_error
+  end
+
+  describe "existing package access" do
+    it "should return the same instance for identical optionless invocations" do
+      define 'foo', :version => '1.0' do
+        package(:zip).should equal(package(:zip))
+      end
+      project('foo').packages.size.should == 1
+    end
+
+    it "should return the exactly matching package identical invocations with options" do
+      define 'foo', :version => '1.0' do
+        package(:zip, :id => 'src')
+        package(:zip, :id => 'bin')
+      end
+      project('foo').package(:zip, :id => 'src').should equal(project('foo').packages.first)
+      project('foo').package(:zip, :id => 'bin').should equal(project('foo').packages.last)
+      project('foo').packages.size.should == 2
+    end
+
+    it "should return the first of the same type for subsequent optionless invocations" do
+      define 'foo', :version => '1.0' do
+        package(:zip, :file => 'override.zip')
+        package(:jar, :file => 'another.jar')
+      end
+      project('foo').package(:zip).name.should == 'override.zip'
+      project('foo').package(:jar).name.should == 'another.jar'
+      project('foo').packages.size.should == 2
+    end
   end
 
 end
