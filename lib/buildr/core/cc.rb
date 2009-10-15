@@ -41,12 +41,12 @@ module Buildr
       # we don't want to actually fail if our dependencies don't succede
       begin
         [:compile, 'test:compile'].each { |name| project.task(name).invoke }
-        notify_build_status(true, project.path_to)
+        notify_build_status(true, project)
       rescue Exception => ex
         $stderr.puts $terminal.color(ex.message, :red)
         $stderr.puts
         
-        notify_build_status(false, project.path_to)
+        notify_build_status(false, project)
       end
       
       main_dirs = project.compile.sources.map(&:to_s)
@@ -107,23 +107,18 @@ module Buildr
             successful = false
           end
           
-          notify_build_status(successful, project.path_to)
+          notify_build_status(successful, project)
           puts $terminal.color("Build complete", :green) if successful
         end
       end
     end
     
-    def notify_build_status(successful, title)
-      trace 'Attempting notification...'
+    def notify_build_status(successful, project)
        if RUBY_PLATFORM =~ /darwin/ && $stdout.isatty && verbose
-         trace 'Growl enabled'
-         
          if successful
-           trace 'Notifying complete'
-           growl_notify('Completed', title, 'Build complete')
+           growl_notify('Completed', 'Your build has completed', project.path_to)
          else
-           trace 'Notifying failed'
-           growl_notify('Failed', title, 'Build failed')
+           growl_notify('Failed', 'Your build has failed with an error', project.path_to)
          end
        end
     end
