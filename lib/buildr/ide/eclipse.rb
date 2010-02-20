@@ -44,7 +44,14 @@ module Buildr
           values = values[0].inject({}) { |h, (k,v)| h[k.to_s] = @project.path_to(v); h }
           @variables = values.merge(@variables || {})
         end
-        @variables || (@project.parent ? @project.parent.eclipse.classpath_variables : {})
+        @variables || (@project.parent ? @project.parent.eclipse.classpath_variables : default_classpath_variables)
+      end
+
+      def default_classpath_variables
+        vars = {}
+        vars[:SCALA_HOME] = ENV['SCALA_HOME'] if ENV['SCALA_HOME']
+        vars[:JAVA_HOME]  = ENV['JAVA_HOME']  if ENV['JAVA_HOME']
+        vars
       end
 
       # :call-seq:
@@ -94,6 +101,26 @@ module Buildr
         else
           @classpath_containers || (@project.parent ? @project.parent.eclipse.classpath_containers : [])
         end
+      end
+
+      # :call-seq:
+      #   exclude_libs() => [lib1, lib2]
+      # Returns the an array of libraries to be excluded from the generated Eclipse classpath
+      def exclude_libs(*values)
+        if values.size > 0
+          @exclude_libs ||= []
+          @exclude_libs += values
+        else
+          @exclude_libs || (@project.parent ? @project.parent.eclipse.exclude_libs : [])
+        end
+      end
+
+      # :call-seq:
+      #   exclude_libs=(lib1, lib2)
+      # Sets libraries to be excluded from the generated Eclipse classpath
+      #
+      def exclude_libs=(libs)
+        @exclude_libs = arrayfy(libs)
       end
 
       # :call-seq:
@@ -163,87 +190,99 @@ module Buildr
       project.recursive_task('eclipse')
     end
 
-    after_define do |project|
-      eclipse = project.task('eclipse')
+    after_define(:eclipse => :package) do |project|
+      # Need to enhance because using project.projects during load phase of the
+      # buildfile has harmful side-effects on project definition order
+      project.enhance do
+        eclipse = project.task('eclipse')
+        # We don't create the .project and .classpath files if the project contains projects.
+        if project.projects.empty?
 
-      eclipse.enhance [ file(project.path_to('.classpath')), file(project.path_to('.project')) ]
+          eclipse.enhance [ file(project.path_to('.classpath')), file(project.path_to('.project')) ]
 
-      # The only thing we need to look for is a change in the Buildfile.
-      file(project.path_to('.classpath')=>Buildr.application.buildfile) do |task|
-        if (project.eclipse.natures.reject { |x| x.is_a?(Symbol) }.size > 0)
-          info "Writing #{task.name}"
+          # The only thing we need to look for is a change in the Buildfile.
+          file(project.path_to('.classpath')=>Buildr.application.buildfile) do |task|
+            if (project.eclipse.natures.reject { |x| x.is_a?(Symbol) }.size > 0)
+              info "Writing #{task.name}"
 
-          m2repo = Buildr::Repositories.instance.local
+              m2repo = Buildr::Repositories.instance.local
 
-          File.open(task.name, 'w') do |file|
-            classpathentry = ClasspathEntryWriter.new project, file
-            classpathentry.write do
-              # Note: Use the test classpath since Eclipse compiles both "main" and "test" classes using the same classpath
-              cp = project.test.compile.dependencies.map(&:to_s) - [ project.compile.target.to_s, project.resources.target.to_s ]
-              cp = cp.uniq
+              File.open(task.name, 'w') do |file|
+                classpathentry = ClasspathEntryWriter.new project, file
+                classpathentry.write do
+                  # Note: Use the test classpath since Eclipse compiles both "main" and "test" classes using the same classpath
+                  cp = project.test.compile.dependencies.map(&:to_s) - [ project.compile.target.to_s, project.resources.target.to_s ]
+                  cp = cp.uniq
 
-              # Convert classpath elements into applicable Project objects
-              cp.collect! { |path| Buildr.projects.detect { |prj| prj.packages.detect { |pkg| pkg.to_s == path } } || path }
+                  # Convert classpath elements into applicable Project objects
+                  cp.collect! { |path| Buildr.projects.detect { |prj| prj.packages.detect { |pkg| pkg.to_s == path } } || path }
 
-              # project_libs: artifacts created by other projects
-              project_libs, others = cp.partition { |path| path.is_a?(Project) }
+                  # Remove excluded libs
+                  cp -= project.eclipse.exclude_libs.map(&:to_s)
 
-              # Separate artifacts under known classpath variable paths
-              # including artifacts located in local Maven2 repository
-              vars = []
-              project.eclipse.classpath_variables.merge(project.eclipse.options.m2_repo_var => m2repo).each do |name, path|
-                matching, others = others.partition { |f| File.expand_path(f.to_s).index(path) == 0 }
-                matching.each do |m|
-                  vars << [m, name, path]
+                  # project_libs: artifacts created by other projects
+                  project_libs, others = cp.partition { |path| path.is_a?(Project) }
+
+                  # Separate artifacts under known classpath variable paths
+                  # including artifacts located in local Maven2 repository
+                  vars = []
+                  project.eclipse.classpath_variables.merge(project.eclipse.options.m2_repo_var => m2repo).each do |name, path|
+                    matching, others = others.partition { |f| File.expand_path(f.to_s).index(path) == 0 }
+                    matching.each do |m|
+                      vars << [m, name, path]
+                    end
+                  end
+
+                  # Generated: Any non-file classpath elements in the project are assumed to be generated
+                  libs, generated = others.partition { |path| File.file?(path.to_s) }
+
+                  classpathentry.src project.compile.sources + generated
+                  classpathentry.src project.resources
+
+                  if project.test.compile.target
+                    classpathentry.src project.test.compile
+                    classpathentry.src project.test.resources
+                  end
+
+                  # Classpath elements from other projects
+                  classpathentry.src_projects project_libs
+
+                  classpathentry.output project.compile.target if project.compile.target
+                  classpathentry.lib libs
+                  classpathentry.var vars
+
+                  project.eclipse.classpath_containers.each { |container|
+                    classpathentry.con container
+                  }
                 end
               end
-
-              # Generated: Any non-file classpath elements in the project are assumed to be generated
-              libs, generated = others.partition { |path| File.file?(path.to_s) }
-
-              classpathentry.src project.compile.sources + generated
-              classpathentry.src project.resources
-
-              if project.test.compile.target
-                classpathentry.src project.test.compile
-                classpathentry.src project.test.resources
-              end
-
-              # Classpath elements from other projects
-              classpathentry.src_projects project_libs
-
-              classpathentry.output project.compile.target if project.compile.target
-              classpathentry.lib libs
-              classpathentry.var vars
-
-              project.eclipse.classpath_containers.each { |container|
-                classpathentry.con container
-              }
             end
           end
-        end
-      end
 
-      # The only thing we need to look for is a change in the Buildfile.
-      file(project.path_to('.project')=>Buildr.application.buildfile) do |task|
-        if (project.eclipse.natures.reject { |x| x.is_a?(Symbol) }.size > 0)
-          info "Writing #{task.name}"
-          File.open(task.name, 'w') do |file|
-            xml = Builder::XmlMarkup.new(:target=>file, :indent=>2)
-            xml.projectDescription do
-              xml.name project.id
-              xml.projects
-              xml.buildSpec do
-                project.eclipse.builders.each { |builder|
-                  xml.buildCommand do
-                    xml.name builder
+          # The only thing we need to look for is a change in the Buildfile.
+          file(project.path_to('.project')=>Buildr.application.buildfile) do |task|
+            info "Writing #{task.name}"
+            File.open(task.name, 'w') do |file|
+              xml = Builder::XmlMarkup.new(:target=>file, :indent=>2)
+              xml.projectDescription do
+                xml.name project.id
+                xml.projects
+                unless project.eclipse.builders.empty?
+                  xml.buildSpec do
+                    project.eclipse.builders.each { |builder|
+                      xml.buildCommand do
+                        xml.name builder
+                      end
+                    }
                   end
-                }
-              end
-              xml.natures do
-                project.eclipse.natures.each { |nature|
-                  xml.nature nature unless nature.is_a? Symbol
-                }
+                end
+                unless project.eclipse.natures.empty?
+                  xml.natures do
+                    project.eclipse.natures.each { |nature|
+                      xml.nature nature unless nature.is_a? Symbol
+                    }
+                  end
+                end
               end
             end
           end
@@ -308,14 +347,14 @@ module Buildr
       def var(libs)
         libs.each do |lib_path, var_name, var_value|
           lib_artifact = file(lib_path)
-          relative_lib_path = lib_path.sub(var_value, var_name)
+          relative_lib_path = lib_path.sub(var_value, var_name.to_s)
           if lib_artifact.respond_to? :sources_artifact
             source_path = lib_artifact.sources_artifact.to_s
             relative_source_path = source_path.sub(var_value, var_name)
             @xml.classpathentry :kind=>'var', :path=>relative_lib_path, :sourcepath=>relative_source_path
           else
             @xml.classpathentry :kind=>'var', :path=>relative_lib_path
-          end            
+          end
         end
       end
 

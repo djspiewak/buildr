@@ -49,7 +49,7 @@ module Buildr
       end
 
       # Adds a test framework to the list of supported frameworks.
-      #   
+      #
       # For example:
       #   Buildr::TestFramework << Buildr::JUnit
       def add(framework)
@@ -126,7 +126,7 @@ module Buildr
       end
 
     end
-  
+
   end
 
 
@@ -176,6 +176,13 @@ module Buildr
         # all sub-projects, but only invoke test on the local project.
         Project.projects.each { |project| project.test.send :only_run, tests }
       end
+
+      # Used by the test/integration rule to only run tests that failed the last time.
+      def only_run_failed() #:nodoc:
+        # Since the tests may reside in a sub-project, we need to set the include/exclude pattern on
+        # all sub-projects, but only invoke test on the local project.
+        Project.projects.each { |project| project.test.send :only_run_failed }
+      end
     end
 
     # Default options already set on each test task.
@@ -195,7 +202,12 @@ module Buildr
       else
         @options = OpenObject.new(default_options)
       end
-      enhance [application.buildfile.name] do
+
+      unless ENV["IGNORE_BUILDFILE"] =~ /(true)|(yes)/i
+        enhance [ application.buildfile.name ]
+        enhance application.buildfile.prerequisites
+      end
+      enhance do
         run_tests if framework
       end
     end
@@ -203,18 +215,18 @@ module Buildr
     # The dependencies used for running the tests. Includes the compiled files (compile.target)
     # and their dependencies. Will also include anything you pass to #with, shared between the
     # testing compile and run dependencies.
-    attr_reader :dependencies
+    attr_accessor :dependencies
 
     # *Deprecated*: Use dependencies instead.
     def classpath
       Buildr.application.deprecated 'Use dependencies instead.'
-      dependencies
+      @dependencies
     end
 
     # *Deprecated*: Use dependencies= instead.
     def classpath=(artifacts)
       Buildr.application.deprecated 'Use dependencies= instead.'
-      self.dependencies = artifacts
+      @dependencies = artifacts
     end
 
     def execute(args) #:nodoc:
@@ -226,7 +238,7 @@ module Buildr
       begin
         super
       rescue RuntimeError
-        raise if options[:fail_on_failure]
+        raise if options[:fail_on_failure] && Buildr.options.test != :all
       ensure
         teardown.invoke
       end
@@ -247,7 +259,7 @@ module Buildr
     def compile(*sources, &block)
       @project.task('test:compile').from(sources).enhance &block
     end
- 
+
     # :call-seq:
     #   resources(*prereqs) => ResourcesTask
     #   resources(*prereqs) { |task| .. } => ResourcesTask
@@ -323,7 +335,7 @@ module Buildr
           Buildr.application.deprecated "Please replace with using(:#{name}=>true)"
           options[name.to_sym] = true
         end
-      end 
+      end
       self
     end
 
@@ -395,16 +407,35 @@ module Buildr
       @report_to ||= file(@project.path_to(:reports, framework)=>self)
     end
 
+    # :call-seq:
+    #   failures_to => file
+    #
+    # We record the list of failed tests for the current framework in this file.
+    #
+    #
+    def failures_to
+      @failures_to ||= file(@project.path_to(:target, "#{framework}-failed")=>self)
+    end
+
+    # :call-seq:
+    #    last_failures => array
+    #
+    # We read the last test failures if any and return them.
+    #
+    def last_failures
+      @last_failures ||= failures_to.exist? ? File.read(failures_to.to_s).split('\n') : []
+    end
+
     # The path to the file that stores the time stamp of the last successful test run.
     def last_successful_run_file #:nodoc:
       File.join(report_to.to_s, 'last_successful_run')
     end
-    
+
     # The time stamp of the last successful test run.  Or Rake::EARLY if no successful test run recorded.
     def timestamp #:nodoc:
       File.exist?(last_successful_run_file) ? File.mtime(last_successful_run_file) : Rake::EARLY
     end
-    
+
     # The project this task belongs to.
     attr_reader :project
 
@@ -435,8 +466,9 @@ module Buildr
 
     # Runs the tests using the selected test framework.
     def run_tests
-      dependencies = Buildr.artifacts(self.dependencies).map(&:to_s).uniq
+      dependencies = (Buildr.artifacts(self.dependencies + compile.dependencies) + [compile.target]).map(&:to_s).uniq
       rm_rf report_to.to_s
+      rm_rf failures_to.to_s
       @tests = @framework.tests(dependencies).select { |test| include?(test) }.sort
       if @tests.empty?
         @passed_tests, @failed_tests = [], []
@@ -444,7 +476,7 @@ module Buildr
         info "Running tests in #{@project.name}"
         begin
           # set the baseDir system property if not set
-          @framework.options[:properties] = { 'baseDir' => @project.test.compile.target.to_s }.merge(@framework.options[:properties] || {})
+          @framework.options[:properties] = { 'baseDir' => compile.target.to_s }.merge(@framework.options[:properties] || {})
           @passed_tests = @framework.run(@tests, dependencies)
         rescue Exception=>ex
           error "Test framework error: #{ex.message}"
@@ -453,6 +485,7 @@ module Buildr
         end
         @failed_tests = @tests - @passed_tests
         unless @failed_tests.empty?
+          Buildr::write(failures_to.to_s, @failed_tests.join("\n"))
           error "The following tests failed:\n#{@failed_tests.join("\n")}"
           fail 'Tests failed!'
         end
@@ -465,10 +498,17 @@ module Buildr
       mkdir_p report_to.to_s
       touch last_successful_run_file
     end
-    
+
     # Limit running tests to specific list.
     def only_run(tests)
       @include = Array(tests)
+      @exclude.clear
+      @forced_need = true
+    end
+
+    # Limit running tests to those who failed the last time.
+    def only_run_failed()
+      @include = Array(last_failures)
       @exclude.clear
       @forced_need = true
     end
@@ -543,6 +583,12 @@ module Buildr
       desc 'Run all tests'
       task('test') { TestTask.run_local_tests false }
 
+      desc 'Run failed tests'
+      task('test:failed') {
+        TestTask.only_run_failed
+        task('test').invoke
+      }
+
       # This rule takes a suffix and runs that tests in the current project. For example;
       #   buildr test:MyTest
       # will run the test com.example.MyTest, if such a test exists for this project.
@@ -567,8 +613,8 @@ module Buildr
       end
 
     end
-    
-    before_define do |project|
+
+    before_define(:test) do |project|
       # Define a recursive test task, and pass it a reference to the project so it can discover all other tasks.
       test = TestTask.define_task('test')
       test.send :associate_with, project
@@ -587,17 +633,20 @@ module Buildr
       test.setup ; test.teardown
     end
 
-    after_define do |project|
+
+
+    after_define(:test => :compile) do |project|
       test = project.test
       # Dependency on compiled tests and resources.  Dependencies added using with.
       test.dependencies.concat [test.compile.target, test.resources.target].compact
+      test.dependencies.concat test.compile.dependencies
       # Dependency on compiled code, its dependencies and resources.
       test.with [project.compile.target, project.resources.target].compact
       test.with project.compile.dependencies
       # Picking up the test frameworks adds further dependencies.
       test.framework
-      
-      project.build test unless test.options[:integration]
+
+      project.build test unless test.options[:integration] || Buildr.options.test == :only
 
       project.clean do
         rm_rf test.compile.target.to_s if test.compile.target
@@ -629,7 +678,7 @@ module Buildr
     def test(*prereqs, &block)
       task('test').enhance prereqs, &block
     end
-  
+
     # :call-seq:
     #   integration { |task| .... }
     #   integration => IntegrationTestTask
@@ -682,6 +731,8 @@ module Buildr
         false
       when /^all$/i
         :all
+      when /^only$/i
+        :only
       when /^(yes|on|true)$/i, nil
         true
       else
