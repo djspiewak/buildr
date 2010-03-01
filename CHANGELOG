@@ -25,16 +25,24 @@
 * Change: Updated to JRuby 1.4.0
 * Change: Updated to JtestR 0.5
 * Change: Updated to JUnit 4.7
+* Change: Updated to JMock 2.5.1 (Antoine Toulme)
 * Change: Load buildr.rb from $HOME/.buildr instead of $HOME
           ($HOME/buildr.rb is still loaded with deprecation warning)
+* Fixed:  BUILDR-348 Buildr fails on windows with jruby and ODE 1.X
+* Fixed:  BUILDR-183 Can't define root artifact namespace outside of project
+          (Ittay Dror)
 * Fixed:  BUILDR-223 Release Task: customizable commit message (Alexis Midon)
+* Fixed:  BUILDR-233 Can't specify version in artifact namespace
+* Fixed:  BUILDR-267 Skipping tests is only done after they are compiled
+          (Antoine Toulme)
+* Fixed:  BUILDR-281 Application#initialize fails if home dir isn't writable
+* Fixed:  BUILDR-327 Specifying :plugin eclipse nature explicitly fails
 * Fixed:  BUILDR-330  Install task should re-install artifact even if they 
           already exist (Alexis Midon)
 * Fixed:  BUILDR-334 Eclipse .classpath files use absolute paths for library 
           entries (Stefan Wasilewski)
-* Fixed:  BUILDR-327 Specifying :plugin eclipse nature explicitly fails
-* Added:  Continuous compilation support
-* Fixed:  buildr test=all didn't run all tests as expected
+* Fixed:  BUILDR-336 Java::Commands.java Prints Command Without --trace
+          (Antoine Toulme)
 * Fixed:  BUILDR-344 Buildr::TestFramework::TestResult::YamlFormatter uses 
           deprecated form of example_pending (Rhett Sutphin)
 * Fixed:  BUILDR-345 Improve project documentation (Peter Schröder)
@@ -63,6 +71,7 @@
           task_dependency if artifact exists
 * Fixed:  BUILDR-384 Buildr fails with rubygems 1.3.6
 * Fixed:  BUILDR-386 Display JRuby version in buildr -V (Antoine Toulme)
+* Fixed:  buildr test=all didn't run all tests as expected
 * Fixed:  Fail-fast if package.with() or include() called with nil values
 * Fixed:  Failures not reported correctly for ScalaTest (Alex Eagle)
 * Fixed:  Test dependencies should include test compile dependencies
@@ -78,10 +87,17 @@
 * Added:  BUILDR-56 Download Scala artifacts if not available locally
 * Added:  BUILDR-163 cobertura:check (Marko Sibakov, Daniel Spiewak).
 * Added:  BUILDR-295 Eclipse task: make 'M2_REPO' repository variable configurable
+* Added:  BUILDR-300 Make Eclipse task more configurable (Antoine Toulme, Alex Boisvert)
+* Change: Upgraded to rubyforge-1.0.5 and net-ssh 2.0.15
 * Change: Monkey-Patched FileUtils::sh on JRuby to use POSIX `system`
-* Change: Updated to Rake 0.8.7, RSpec 1.2.6 and JRuby-openssl 0.5.1.
-* Fixed:  BUILDR-292 Workaround for JRUBY-3381 on FileUtils.mv
+* Change: Updated to Rake 0.8.7, RSpec 1.2.8 and JRuby-openssl 0.5.2.
+* Change: Updated to easyb 0.9 (Joel Muzzerall)
+* Change: Updated to TestNG 5.10
+* Change: Updated to JRuby 1.3.1
 * Fixed:  BUILDR-23 Support for setting file mode when packaging (Ittay Dror).
+* Fixed:  BUILDR-278 tasks/*.rake files are loaded after the buildfile (Rhett Sutphin)
+* Fixed:  BUILDR-282 release goal should not strip leading '0' digits from version numbers.
+* Fixed:  BUILDR-289 Improved error message when JAVA_HOME points to an invalid JRE/JDK installation
 * Fixed:  BUILDR-290 Dependencies cannot be downloaded over SSL.
 * Fixed:  BUILDR-291 Local tasks do not support arguments (Ittay Dror).
 * Fixed:  BUILDR-292 Workaround for JRUBY-3381 on FileUtils.mv
