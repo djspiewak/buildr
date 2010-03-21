@@ -24,10 +24,10 @@ module Buildr::Scala
   class << self
 
     # Retrieves the Scala version string from the
-    # standard library or nil if Scala is not
-    # available.
+    # standard library or nil if Scala is not available.
     def version_str
       begin
+        Java.load
         # Scala version string normally looks like "version 2.7.3.final"
         Java.scala.util.Properties.versionString.sub 'version ', ''
       rescue
@@ -36,13 +36,28 @@ module Buildr::Scala
     end
 
     def version
-      if version_str
+      if Buildr.settings.build['scala.version']
+        Buildr.settings.build['scala.version']
+      elsif version_str
         # any consecutive sequence of numbers followed by dots
         match = version_str.match(/\d+\.\d[\d\.]*/) or
           fail "Unable to parse Scala version: #{version_str} "
         match[0].sub(/.$/, "") # remove trailing dot, if any
       else
         DEFAULT_VERSION       # TODO return the version installed from Maven repo
+      end
+    end
+
+    def compatible_28?
+      md = version.match /^(\d)\.(\d)/
+      unless md.nil?
+        if md[1].to_i == 2
+          md[2].to_i >= 8
+        else
+          md[1].to_i > 2
+        end
+      else
+        false
       end
     end
   end
@@ -69,8 +84,9 @@ module Buildr::Scala
     # namespace before this file is required.  This is of course, only
     # if SCALA_HOME is not set or invalid.
     REQUIRES = ArtifactNamespace.for(self) do |ns|
-      ns.library!      'org.scala-lang:scala-library:jar:>=' + DEFAULT_VERSION
-      ns.compiler!     'org.scala-lang:scala-compiler:jar:>=' + DEFAULT_VERSION
+      version = Buildr.settings.build['scala.check'] || DEFAULT_VERSION
+      ns.library!      'org.scala-lang:scala-library:jar:>=' + version
+      ns.compiler!     'org.scala-lang:scala-compiler:jar:>=' + version
     end
 
     class << self
@@ -125,13 +141,19 @@ module Buildr::Scala
       options[:warnings] = verbose if options[:warnings].nil?
       options[:deprecation] ||= false
       options[:optimise] ||= false
+      options[:make] ||= :transitivenocp if Scala.compatible_28?
       options[:javac] ||= {}
 
       @java = Javac.new(project, options[:javac])
     end
 
     def compile(sources, target, dependencies) #:nodoc:
-      check_options options, OPTIONS
+      check_options(options, OPTIONS + (Scala.compatible_28? ? [:make] : []))
+
+      java_sources = java_sources(sources)
+      enable_dep_tracing = Scala.compatible_28? && java_sources.empty?
+
+      dependencies.unshift target if enable_dep_tracing
 
       cmd_args = []
       cmd_args << '-classpath' << dependencies.join(File::PATH_SEPARATOR)
@@ -139,6 +161,16 @@ module Buildr::Scala
       cmd_args << '-sourcepath' << source_paths.join(File::PATH_SEPARATOR) unless source_paths.empty?
       cmd_args << '-d' << File.expand_path(target)
       cmd_args += scalac_args
+
+      if enable_dep_tracing
+        dep_dir = File.expand_path(target)
+        Dir.mkdir dep_dir unless File.exists? dep_dir
+
+        cmd_args << '-make:' + options[:make].to_s
+        cmd_args << '-dependencyfile'
+        cmd_args << File.expand_path('.scala-deps', dep_dir)
+      end
+
       cmd_args += files_from_sources(sources)
 
       unless Buildr.application.options.dryrun
@@ -157,7 +189,6 @@ module Buildr::Scala
           fail 'Failed to compile, see errors above' if Java.scala.tools.nsc.Main.reporter.hasErrors
         end
 
-        java_sources = java_sources(sources)
         unless java_sources.empty?
           trace 'Compiling mixed Java/Scala sources'
 

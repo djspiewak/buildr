@@ -104,10 +104,10 @@ module Buildr
       def dependencies
         two_or_later = version[0,1].to_i >= 2
         group = two_or_later ? "org.jmock" : "jmock"
-        
+
         @dependencies ||= ["#{group}:jmock:jar:#{version}"]
         if two_or_later
-          @dependencies << "org.jmock:jmock-junit#{Buildr::JUnit.version[0,1]}:jar:#{version}"
+          @dependencies << "org.jmock:jmock-junit#{Buildr::JUnit.version.to_s[0,1]}:jar:#{version}"
           @dependencies << "org.hamcrest:hamcrest-core:jar:1.1"
           @dependencies << "org.hamcrest:hamcrest-library:jar:1.1"
         end

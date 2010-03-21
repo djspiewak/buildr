@@ -258,7 +258,7 @@ module Buildr
 
         opts.on_tail("-h", "--help", "-H", "Display this help message.") do
           puts opts
-          exit
+          exit 0
         end
         standard_buildr_options.each { |args| opts.on(*args) }
       end.parse!
@@ -286,7 +286,7 @@ module Buildr
           lambda { |value|
             value ||= File.exist?('pom.xml') ? 'pom.xml' : Dir.pwd
             raw_generate_buildfile value
-            exit
+            exit 0
           }
         ],
         ['--libdir', '-I LIBDIR', "Include LIBDIR in the search path for required modules.",
@@ -355,7 +355,7 @@ module Buildr
         ['--version', '-V', "Display the program version.",
           lambda { |value|
             puts "Buildr #{Buildr::VERSION} #{RUBY_PLATFORM[/java/] && '(JRuby '+ (Buildr.settings.build['jruby'] || JRUBY_VERSION) +')'}"
-            exit
+            exit 0
           }
         ]
       ]
@@ -507,13 +507,14 @@ module Buildr
         $stderr.puts $terminal.color(ex.message, :red)
         exit(1)
       rescue Exception => ex
-        title, message = "Your build failed with an error", "#{Dir.pwd}:\n#{ex.message}"
+        ex_msg = ex.class.name == "Exception" ? ex.message : "#{ex.class.name} : #{ex.message}"
+        title, message = "Your build failed with an error", "#{Dir.pwd}:\n#{ex_msg}"
         @on_failure.each do |block|
           block.call(title, message, ex) rescue nil
         end
         # Exit with error message
         $stderr.puts "Buildr aborted!"
-        $stderr.puts $terminal.color(ex.message, :red)
+        $stderr.puts $terminal.color(ex_msg, :red)
         if options.trace
           $stderr.puts ex.backtrace.join("\n")
         else
@@ -567,14 +568,13 @@ end
 
 
 # Add a touch of color when available and running in terminal.
+HighLine.use_color = false
 if $stdout.isatty
   begin
     require 'Win32/Console/ANSI' if Config::CONFIG['host_os'] =~ /mswin/
     HighLine.use_color = true
   rescue LoadError
   end
-else
-  HighLine.use_color = false
 end
 
 
@@ -635,7 +635,7 @@ module Rake #:nodoc
           old_chain, Thread.current[:rake_chain] = Thread.current[:rake_chain], new_chain
           execute(task_args) if needed?
         ensure
-          Thread.current[:rake_chain] = nil
+          Thread.current[:rake_chain] = old_chain
         end
       end
     end
