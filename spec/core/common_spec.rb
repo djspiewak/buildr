@@ -309,6 +309,21 @@ describe Buildr::Filter do
     Dir['target/*'].sort.should eql(['target/file2', 'target/file3'])
   end
 
+  it 'should respond to :include with regular expressions and use these inclusion patterns' do
+    @filter.from('src').into('target').include(/file[2|3]/).run
+    Dir['target/*'].sort.should eql(['target/file2', 'target/file3'])
+  end
+
+  it 'should respond to :include with a Proc and use these inclusion patterns' do
+    @filter.from('src').into('target').include(lambda {|file| file[-1, 1].to_i%2 == 0}).run
+    Dir['target/*'].sort.should eql(['target/file2', 'target/file4'])
+  end
+
+  it 'should respond to :include with a FileTask and use these inclusion patterns' do
+    @filter.from('src').into('target').include(file('target/file2'), file('target/file4')).run
+    Dir['target/*'].sort.should eql(['target/file2', 'target/file4'])
+  end
+
   it 'should respond to :exclude and return self' do
     @filter.exclude('file').should be(@filter)
   end
@@ -316,6 +331,31 @@ describe Buildr::Filter do
   it 'should respond to :exclude and use these exclusion patterns' do
     @filter.from('src').into('target').exclude('file2', 'file3').run
     Dir['target/*'].sort.should eql(['target/file1', 'target/file4'])
+  end
+
+  it 'should respond to :exclude with regular expressions and use these exclusion patterns' do
+    @filter.from('src').into('target').exclude(/file[2|3]/).run
+    Dir['target/*'].sort.should eql(['target/file1', 'target/file4'])
+  end
+
+  it 'should respond to :exclude with a Proc and use these exclusion patterns' do
+    @filter.from('src').into('target').exclude(lambda {|file| file[-1, 1].to_i%2 == 0}).run
+    Dir['target/*'].sort.should eql(['target/file1', 'target/file3'])
+  end
+
+  it 'should respond to :exclude with a FileTask and use these exclusion patterns' do
+    @filter.from('src').into('target').exclude(file('target/file1'), file('target/file3')).run
+    Dir['target/*'].sort.should eql(['target/file2', 'target/file4'])
+  end
+
+  it 'should respond to :exclude with a FileTask, use these exclusion patterns and depend on those tasks' do
+    file1 = false
+    file2 = false
+    @filter.from('src').into('target').exclude(file('target/file1').enhance { file1 = true }, file('target/file3').enhance {file2 = true }).run
+    Dir['target/*'].sort.should eql(['target/file2', 'target/file4'])
+    @filter.target.invoke
+    file1.should be_true
+    file2.should be_true
   end
 
   it 'should copy files over' do
@@ -417,6 +457,12 @@ describe Buildr::Filter do
 
   it 'should using Maven mapper by default' do
     @filter.using('key1'=>'value1', 'key2'=>'value2').mapper.should eql(:maven)
+  end
+
+  it 'should apply hash mapping with boolean values' do
+    write "src/file", "${key1} and ${key2}"
+    @filter.from('src').into('target').using(:key1=>true, :key2=>false).run
+    read("target/file").should eql("true and false")
   end
 
   it 'should apply hash mapping using regular expression' do
