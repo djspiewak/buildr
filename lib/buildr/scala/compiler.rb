@@ -157,6 +157,7 @@ module Buildr::Scala
       options[:deprecation] ||= false
       options[:optimise] ||= false
       options[:make] ||= :transitivenocp if Scala.compatible_28?
+      options[:continuations] ||= false if Scala.compatible_28?
       options[:javac] ||= {}
 
       @java = Javac.new(project, options[:javac])
@@ -184,6 +185,10 @@ module Buildr::Scala
         cmd_args << '-make:' + options[:make].to_s
         cmd_args << '-dependencyfile'
         cmd_args << File.expand_path('.scala-deps', dep_dir)
+      end
+
+      if Scala.compatible_28? && options[:continuations]
+        cmd_args << '-Pcontinuations:enable'
       end
 
       cmd_args += files_from_sources(sources)
